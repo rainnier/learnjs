@@ -2,13 +2,16 @@
 <html>
   <head>
     <meta charset='utf-8'>
-    <title>Learn AWS!</title>
+    <meta name="google-signin-client_id" 
+        content="475990348147-n6e4hhg76qtn5v1mj3024ti154fbssnc.apps.googleusercontent.com"/>
+    <title>MaarTeeS</title>
     <link href='//fonts.googleapis.com/css?family=Raleway:400,300,600' rel='stylesheet' type='text/css'>
     <link rel='stylesheet' href='https://cdnjs.cloudflare.com/ajax/libs/normalize/3.0.2/normalize.min.css'>
     <link rel='stylesheet' href='https://cdnjs.cloudflare.com/ajax/libs/skeleton/2.0.4/skeleton.min.css'>
     <script src='https://code.jquery.com/jquery-2.1.4.min.js'></script>
     <script src='/vendor.js'></script>
     <script src='/app.js'></script>
+    <script src="https://apis.google.com/js/platform.js" async defer></script>
     <style type="text/css" media="all">
     body { margin-top: 30px; }
         .templates { display: none; }
@@ -40,6 +43,10 @@
     .text-lg {
         font-size: 150%;
     }
+    .navbar-padding {
+        padding-top: 7px;
+        display: inline-block;
+    }
     </style>
   </head>
     
@@ -51,6 +58,11 @@
                     <li><a class='text-lg' href="#">LearnJS</a></li>
                     <li><a href="#problem-1">Start</a></li>
                 </ul>
+                <div class='four columns'>
+                    <span class='navbar-padding u-pull-right'>
+                        <span class="g-signin2" data-onsuccess="googleSignIn"></span>
+                    </span>
+                </div>
             </div>
             <div class='view-container container'>
                 
