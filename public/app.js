@@ -1,6 +1,10 @@
 'use strict';
 
-var learnjs = {};
+var learnjs = {
+    poolId: 'us-west-2:f2a04177-2a94-46ee-ae08-733391f0df72'
+};
+
+learnjs.identity = new $.Deferred();
 
 learnjs.problems = [
     {
@@ -55,10 +59,19 @@ learnjs.problemView = function(data) {
     return view;
 }
 
+learnjs.profileView = function() {
+    var view = learnjs.template('profile-view');
+    learnjs.identity.done(function(identity) {
+        view.find('.email').text(identity.email);
+    });
+    return view;
+}
+
 learnjs.showView = function(hash) {
     
     var routes = {
         '#problem': learnjs.problemView,
+        '#profile': learnjs.profileView,
         '#': learnjs.landingView,
         '': learnjs.landingView
     };
@@ -89,6 +102,12 @@ learnjs.buildCorrectFlash = function (problemNum) {
     return correctFlash;
 }
 
+learnjs.addProfileLink = function(profile) {
+    var link = learnjs.template('profile-link');
+    link.find('a').text(profile.email);
+    $('.signin-bar').prepend(link);
+}
+
 learnjs.flashElement = function(elem, content) {
     elem.fadeOut('fast', function() {
         elem.html(content);
@@ -101,6 +120,7 @@ learnjs.appOnReady = function() {
         learnjs.showView(window.location.hash);
     };
     learnjs.showView(window.location.hash);
+    learnjs.identity.done(learnjs.addProfileLink);
 }
 
 learnjs.applyObject = function(obj, elem) {
@@ -113,6 +133,70 @@ learnjs.triggerEvent = function(name, args) {
     $('.view-container>*').trigger(name, args);
 }
 
-function googleSignIn() {
-    console.log(arguments);
+function googleSignIn(googleUser) {
+    var id_token = googleUser.getAuthResponse().id_token;
+    AWS.config.update({
+        region: 'us-west-2',
+        credentials: new AWS.CognitoIdentityCredentials({
+            IdentityPoolId: learnjs.poolId,
+            Logins: {
+                'accounts.google.com': id_token
+            }
+        })
+    })
+    learnjs.awsRefresh().then(function(id) {
+        learnjs.identity.resolve({
+            id: id,
+            email: googleUser.getBasicProfile().getEmail(),
+            refresh: refresh
+        });
+    });
+}
+
+function refresh() {
+    return gapi.auth2.getAuthInstance().signIn({
+            prompt: 'login'
+        }).then(function(userUpdate) {
+            var creds = AWS.config.credentials;
+            var newToken = userUpdate.getAuthResponse().id_token;
+            creds.params.Logins['accounts.google.com'] = newToken;
+            return learnjs.awsRefresh();
+        });
+}
+
+learnjs.awsRefresh = function() {
+    var deferred = new $.Deferred();
+    AWS.config.credentials.refresh(function(err) {
+        if (err) {
+            deferred.reject(err);
+        } else {
+            deferred.resolve(AWS.config.credentials.identityId);
+        }
+    });
+    return deferred.promise();
+}
+
+learnjs.sendDbRequest = function(req, retry) {
+    var promise = new $.Deferred();
+    req.on('error', function(error) {
+        if (error.code === "CredentialsError") {
+            learnjs.identity.then(function(identity) {
+                return identity.refresh().then(function() {
+                    return retry();
+                    }, function() {
+                        promise.reject(resp);
+                    });
+            });
+        } else {
+        promise.reject(error);
+        }
+        });
+        
+    req.on('success', function(resp) {
+        promise.resolve(resp.data);
+    });
+    
+    req.send();
+    
+    return promise;
 }
